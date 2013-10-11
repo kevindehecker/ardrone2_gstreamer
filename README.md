@@ -1,4 +1,4 @@
-ardrone2_gstreamer
+ARDrone2 gstreamer
 ==================
 
 GStreamer for ArDrone2

@@ -102,7 +102,7 @@ def ardrone2_start_vision():
 parser = argparse.ArgumentParser(description='ARDrone 2 python helper.')
 parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
                    help='the ip address of ardrone2')
-subparsers = parser.add_subparsers(title='Command to execute', dest='command')
+subparsers = parser.add_subparsers(title='Command to execute', metavar='command', dest='command')
 
 # All the subcommands and arguments
 subparsers.add_parser('status', help='Request the status of the ARDrone 2')

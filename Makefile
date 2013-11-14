@@ -29,9 +29,11 @@ drone:
 	} | ftp -n $(HOST)
 	{							\
 		echo "tar -xzf arm_light.tgz";			\
+		echo "rm arm_light.tgz";			\
 		echo "mkdir -p /opt/arm";			\
 		echo "mkdir -p /lib/dsp";			\
-		echo "mount --bind /data/video/opt /opt";	\
+		echo "mount --bind /data/video/opt/arm /opt/arm";	\
+		echo "mount --bind /data/video/opt/arm/lib/dsp /lib/dsp";	\
 		echo "ls -altr /opt/arm/gst/bin";		\
 	} | telnet $(HOST)
 

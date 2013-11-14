@@ -1,0 +1,230 @@
+#!/usr/bin/env python
+import re
+import argparse
+import socket
+import telnetlib
+from ftplib import FTP
+
+
+# Check if IP is valid
+def is_ip(address):
+  try:
+    socket.inet_aton(address)
+    ip = True
+  except socket.error:
+    ip = False
+  return ip
+
+# Execute a command
+def execute_command(command):
+  tn.write(command+'\n')
+  return tn.read_until('# ')[len(command)+2:-4]
+
+# Read from config.ini
+def read_from_config(name, config = ''):
+  if config == '':
+    config = execute_command('cat /data/config.ini')
+  search = re.search(name+'[^=]+=[\r\n\t ]([^\r\n\t ]+)', config)
+  if search == None:
+    return ''
+  else:
+    return search.group(1)
+
+# Write to config
+def write_to_config(name, value):
+  if read_from_config(name) == '':
+    execute_command('echo "'+name+' = '+value+'\" >> /data/config.ini')
+  else:
+    execute_command('sed -i "s/\('+name+' *= *\).*/\\1'+value+'/g" /data/config.ini')
+
+# Check the version
+def check_version():
+  return execute_command('cat /firmware/version.txt')
+
+# Check what currently is running on the drone
+def check_running():
+  ps_aux = execute_command('ps')
+  running = ""
+
+  if 'program.elf' in ps_aux:
+    running += ' Native'
+  if 'ap.elf' in ps_aux:
+    running += ' Paparazzi'
+  if 'gst-launch' in ps_aux:
+    running += ' GStreamer'
+  return running[1:]
+
+# Check if vision framework is installed
+def check_vision_installed():
+  du_opt = execute_command('du -d 2 /data/video/opt')
+  return '/data/video/opt/arm/gst' in du_opt or '/data/video/opt/arm/lib' in du_opt or '/data/video/opt/arm/tidsp-binaries-23.i3.8' in du_opt
+
+# Check if the vision framework is running
+def check_vision_running():
+  du_opt = execute_command('du -d 2 /opt')
+  return '/opt/arm/gst' in du_opt and '/opt/arm/lib' in du_opt and '/opt/arm/tidsp-binaries-23.i3.8' in du_opt
+
+# Check if autoboot is installed
+def check_autoboot():
+  check_update = execute_command('grep "START_PAPARAZZI" /bin/check_update.sh')
+  wifi_setup = execute_command('grep "BASE_ADRESS" /bin/wifi_setup.sh')
+  if "START_PAPARAZZI" in check_update and "BASE_ADRESS" in wifi_setup:
+    return True
+  else:
+    return False
+
+# Check the filesystem
+def check_filesystem():
+  return execute_command('df -h')
+
+# Reboot the drone
+def ardrone2_reboot():
+  execute_command('reboot')
+
+# Install the vision framework
+def ardrone2_install_vision():
+  print 'TODO'
+
+# Remove the vision framework
+def ardrone2_remove_vision():
+  print 'TODO'
+
+# Start the vision framework
+def ardrone2_start_vision():
+  execute_command("mkdir -p /opt/arm")
+  execute_command("mkdir -p /lib/dsp")
+  execute_command("mount --bind /data/video/opt/arm /opt/arm")
+  execute_command("mount --bind /data/video/opt/arm/lib/dsp /lib/dsp")
+  execute_command("ls -altr /opt/arm/gst/bin")
+
+
+# Parse the arguments
+parser = argparse.ArgumentParser(description='ARDrone 2 python helper.')
+parser.add_argument('command', metavar='COMMAND',
+                   help='the command to be executed')
+parser.add_argument('arguments', metavar='ARGUMENTS', nargs='*',
+                   help='the arguments for the command')
+parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
+                   help='the ip address of ardrone2')
+args = parser.parse_args()
+
+# Connect with telnet and ftp
+try:
+  tn = telnetlib.Telnet(args.host)
+  ftp = FTP(args.host)
+except:
+  print 'Could not connect to ARDrone 2 (host: '+args.host+')'
+  exit(2)
+
+# Read until after login
+tn.read_until('# ')
+
+# Check the ARDrone 2 status
+if args.command == 'status':
+  config_ini = execute_command('cat /data/config.ini')
+
+  print '======================== ARDrone 2 Status ========================'
+  print 'Version:\t\t'+check_version()
+  print 'Host:\t\t\t'+args.host+' ('+read_from_config('static_ip_address_base', config_ini)+read_from_config('static_ip_address_probe', config_ini)+' after boot)'
+  print 'Currently running:\t'+check_running()
+  print 'Serial number:\t\t' + read_from_config('drone_serial', config_ini)
+  print 'Network id:\t\t' + read_from_config('ssid_single_player', config_ini)
+  print 'Motor software:\t\t' \
+    +read_from_config('motor1_soft', config_ini)+'\t'+read_from_config('motor2_soft', config_ini)+'\t' \
+    +read_from_config('motor3_soft', config_ini)+'\t'+read_from_config('motor4_soft', config_ini)
+  print 'Motor hardware:\t\t' \
+    +read_from_config('motor1_hard', config_ini)+'\t'+read_from_config('motor2_hard', config_ini)+'\t' \
+    +read_from_config('motor3_hard', config_ini)+'\t'+read_from_config('motor4_hard', config_ini)
+
+  autorun = {'': 'Native','0': 'Native','1': 'Paparazzi RAW','2': 'Paparazzi SDK'}
+  if check_autoboot():
+    print 'Autorun at start:\tInstalled booting ' + autorun[read_from_config('start_paparazzi', config_ini)]
+  else:
+    print 'Autorun at start:\tNot installed'
+
+  # Check if the vision framework is installed and running
+  vision_framework = ""
+  if check_vision_installed():
+    vision_framework += "Installed"
+  if check_vision_running:
+    vision_framework += " and running"
+  print 'Vision framework:\t'+vision_framework
+  
+  # Request the filesystem status
+  print '\n======================== Filesystem Status ========================'
+  print check_filesystem()
+
+# Reboot the drone
+elif args.command == 'reboot':
+  ardrone2_reboot()
+  print 'The ARDrone 2 is rebooting...'
+
+# Change the network ID
+elif args.command == 'networkid':
+  if len(args.arguments) != 1:
+    print 'Command networkid expected 1 argument, the network name'
+  else:
+    write_to_config('ssid_single_player', args.arguments[0])
+    print 'The network ID (SSID) of the ARDrone 2 is changed to '+args.arguments[0]
+    
+    if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
+      ardrone2_reboot()
+
+# Change the IP address
+elif args.command == 'ipaddress':
+  if len(args.arguments) != 1 or not is_ip(args.arguments[0]):
+    print 'Command ipaddress expected 1 argument, the ip address'
+  else:
+    splitted_ip = args.arguments[0].split(".")
+    write_to_config('static_ip_address_base', splitted_ip[0]+'.'+splitted_ip[1]+'.'+splitted_ip[2]+'.')
+    write_to_config('static_ip_address_probe', splitted_ip[3])
+    print 'The IP Address of the ARDrone 2 is changed to '+args.arguments[0]
+    
+    if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
+      ardrone2_reboot()
+
+# Change the autostart
+elif args.command == 'autostart':
+  autorun = {'native': '0','paparazzi_raw': '1','paparazzi_sdk': '2'}
+  if len(args.arguments) != 1 or args.arguments[0] not in autorun:
+    print 'Command autostart expected 1 argument(native, paparazzi_sdk or paparazzi_raw)'
+  else:
+    write_to_config('start_paparazzi', autorun[args.arguments[0]])
+    print 'The autostart on boot is changed to '+args.arguments[0]
+
+# Install Vision framework
+elif args.command == 'installvision':
+  if check_vision_installed():
+    print 'Vision framework already installed'
+    if raw_input("Shall I reinstall the vision framework? (y/N) ").lower() == 'y':
+      ardrone2_remove_vision()
+      ardrone2_install_vision()
+  
+  ardrone2_install_vision()
+  print 'Vision framework installed'
+
+# Start Vision framework
+elif args.command == 'startvision':
+  if check_vision_running():
+    print 'Vision framework already started'
+  else:
+    if not check_vision_installed():
+      print 'No vision framework installed'
+      if raw_input("Shall I install the vision framework? (y/N) ").lower() == 'y':
+        ardrone2_install_vision()
+    
+    if check_vision_installed():
+      ardrone2_start_vision()
+      print 'Vision framework started'
+
+# Unknown command
+else:
+  print 'Unknown command "'+args.command+'"'
+  tn.close()
+  ftp.close();
+  exit(3)
+
+# Close the telnet and python script
+tn.close();
+ftp.close();
+exit(0)

@@ -100,12 +100,26 @@ def ardrone2_start_vision():
 
 # Parse the arguments
 parser = argparse.ArgumentParser(description='ARDrone 2 python helper.')
-parser.add_argument('command', metavar='COMMAND',
-                   help='the command to be executed')
-parser.add_argument('arguments', metavar='ARGUMENTS', nargs='*',
-                   help='the arguments for the command')
 parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
                    help='the ip address of ardrone2')
+subparsers = parser.add_subparsers(title='Command to execute', dest='command')
+
+# All the subcommands and arguments
+subparsers.add_parser('status', help='Request the status of the ARDrone 2')
+subparsers.add_parser('reboot', help='Reboot the ARDrone 2')
+subparsers.add_parser('installvision', help='Install the vision framework')
+subparsers.add_parser('startvision', help='Start the vision framework')
+subparser_start = subparsers.add_parser('start', help='Start a program on the ARDrone 2')
+subparser_start.add_argument('program', help='the program to start')
+subparser_kill = subparsers.add_parser('kill', help='Kill a program on the ARDrone 2')
+subparser_kill.add_argument('program', help='the program to kill')
+subparser_networkid = subparsers.add_parser('networkid', help='Set the network ID(SSID) of the ARDrone 2')
+subparser_networkid.add_argument('name', help='the new network ID(SSID)')
+subparser_ipaddress = subparsers.add_parser('ipaddress', help='Set the IP address of the ARDrone 2')
+subparser_ipaddress.add_argument('address', help='the new IP address')
+subparser_autostart = subparsers.add_parser('autostart', help='Set what to start on boot for the ARDrone 2')
+subparser_autostart.add_argument('type', choices=['native','paparazzi_raw','paparazzi_sdk'], help='what to start on boot')
+
 args = parser.parse_args()
 
 # Connect with telnet and ftp
@@ -159,38 +173,39 @@ elif args.command == 'reboot':
   ardrone2_reboot()
   print 'The ARDrone 2 is rebooting...'
 
+# Kill a program
+elif args.command == 'kill':
+  execute_command('killall -9 '+args.program)
+  print 'Program "'+args.program+'" is now killed'
+
+# Start a program
+elif args.command == 'start':
+  execute_command(args.start+' &')
+  print 'Program "'+args.start+'" is now started'
+
 # Change the network ID
 elif args.command == 'networkid':
-  if len(args.arguments) != 1:
-    print 'Command networkid expected 1 argument, the network name'
-  else:
-    write_to_config('ssid_single_player', args.arguments[0])
-    print 'The network ID (SSID) of the ARDrone 2 is changed to '+args.arguments[0]
-    
-    if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
-      ardrone2_reboot()
+  write_to_config('ssid_single_player', args.name)
+  print 'The network ID (SSID) of the ARDrone 2 is changed to '+args.name  
+  
+  if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
+    ardrone2_reboot()
 
 # Change the IP address
 elif args.command == 'ipaddress':
-  if len(args.arguments) != 1 or not is_ip(args.arguments[0]):
-    print 'Command ipaddress expected 1 argument, the ip address'
-  else:
-    splitted_ip = args.arguments[0].split(".")
-    write_to_config('static_ip_address_base', splitted_ip[0]+'.'+splitted_ip[1]+'.'+splitted_ip[2]+'.')
-    write_to_config('static_ip_address_probe', splitted_ip[3])
-    print 'The IP Address of the ARDrone 2 is changed to '+args.arguments[0]
-    
-    if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
-      ardrone2_reboot()
+  splitted_ip = args.address.split(".")
+  write_to_config('static_ip_address_base', splitted_ip[0]+'.'+splitted_ip[1]+'.'+splitted_ip[2]+'.')
+  write_to_config('static_ip_address_probe', splitted_ip[3])
+  print 'The IP Address of the ARDrone 2 is changed to '+args.address
+  
+  if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
+    ardrone2_reboot()
 
 # Change the autostart
 elif args.command == 'autostart':
   autorun = {'native': '0','paparazzi_raw': '1','paparazzi_sdk': '2'}
-  if len(args.arguments) != 1 or args.arguments[0] not in autorun:
-    print 'Command autostart expected 1 argument(native, paparazzi_sdk or paparazzi_raw)'
-  else:
-    write_to_config('start_paparazzi', autorun[args.arguments[0]])
-    print 'The autostart on boot is changed to '+args.arguments[0]
+  write_to_config('start_paparazzi', autorun[args.type])
+  print 'The autostart on boot is changed to '+args.type
 
 # Install Vision framework
 elif args.command == 'installvision':
@@ -216,13 +231,6 @@ elif args.command == 'startvision':
     if check_vision_installed():
       ardrone2_start_vision()
       print 'Vision framework started'
-
-# Unknown command
-else:
-  print 'Unknown command "'+args.command+'"'
-  tn.close()
-  ftp.close();
-  exit(3)
 
 # Close the telnet and python script
 tn.close();

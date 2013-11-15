@@ -18,24 +18,7 @@ install:
 	sb2-init -c qemu-arm armv7 /usr/local/codesourcery/arm-2009q3/bin/arm-none-linux-gnueabi-gcc
 
 drone:
-	-{							\
-		echo "rm -rf /opt";				\
-		echo "rm -rf /lib/dsp";				\
-	} | telnet $(HOST)
-	{							\
-		echo "binary";					\
-		echo "put ./bin/arm_light.tgz arm_light.tgz";	\
-		echo "quit";					\
-	} | ftp -n $(HOST)
-	{							\
-		echo "tar -xzf arm_light.tgz";			\
-		echo "rm arm_light.tgz";			\
-		echo "mkdir -p /opt/arm";			\
-		echo "mkdir -p /lib/dsp";			\
-		echo "mount --bind /data/video/opt/arm /opt/arm";	\
-		echo "mount --bind /data/video/opt/arm/lib/dsp /lib/dsp";	\
-		echo "ls -altr /opt/arm/gst/bin";		\
-	} | telnet $(HOST)
+	./ardrone2.py installvision
 
 explain:
 	{							\

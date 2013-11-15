@@ -237,7 +237,9 @@ elif args.command == 'startvision':
 
 elif args.command == 'upload_gst_module':
   print 'Uploading ...' + args.file
-  ftp.storbinary("STOR libName.so",file(args.file,"rb"))
+  ftp.storbinary("STOR " + args.file,file(args.file,"rb"))
+  print execute_command("chmod 777 /data/video/" + args.file)
+  print execute_command("mv /data/video/" + args.file + " /data/video/opt/arm/gst/lib/gstreamer-0.10")
   print 'Ready...'
 
 # Close the telnet and python script

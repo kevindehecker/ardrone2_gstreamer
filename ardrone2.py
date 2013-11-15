@@ -99,7 +99,7 @@ def ardrone2_start_vision():
 
 
 # Parse the arguments
-parser = argparse.ArgumentParser(description='ARDrone 2 python helper.')
+parser = argparse.ArgumentParser(description='ARDrone 2 python helper. Use ardrone2.py -h for help')
 parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
                    help='the ip address of ardrone2')
 subparsers = parser.add_subparsers(title='Command to execute', metavar='command', dest='command')
@@ -108,6 +108,8 @@ subparsers = parser.add_subparsers(title='Command to execute', metavar='command'
 subparsers.add_parser('status', help='Request the status of the ARDrone 2')
 subparsers.add_parser('reboot', help='Reboot the ARDrone 2')
 subparsers.add_parser('installvision', help='Install the vision framework')
+subparser_upload = subparsers.add_parser('upload_gst_module', help='Upload, configure and move a gstreamer0.10 module libXXX.so')
+subparser_upload.add_argument('file', help='Filename of *.so module')
 subparsers.add_parser('startvision', help='Start the vision framework')
 subparser_start = subparsers.add_parser('start', help='Start a program on the ARDrone 2')
 subparser_start.add_argument('program', help='the program to start')
@@ -126,6 +128,7 @@ args = parser.parse_args()
 try:
   tn = telnetlib.Telnet(args.host)
   ftp = FTP(args.host)
+  ftp.login()
 except:
   print 'Could not connect to ARDrone 2 (host: '+args.host+')'
   exit(2)
@@ -231,6 +234,11 @@ elif args.command == 'startvision':
     if check_vision_installed():
       ardrone2_start_vision()
       print 'Vision framework started'
+
+elif args.command == 'upload_gst_module':
+  print 'Uploading ...' + args.file
+  ftp.storbinary("STOR libName.so",file(args.file,"rb"))
+  print 'Ready...'
 
 # Close the telnet and python script
 tn.close();

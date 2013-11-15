@@ -14,7 +14,7 @@ clean:
 	rm -rf ./opt
 
 install:
-	sudo apt-get install scratchbox2 qemu
+	sudo apt-get install scratchbox2 qemu gstreamer0.10-ffmpeg
 	sb2-init -c qemu-arm armv7 /usr/local/codesourcery/arm-2009q3/bin/arm-none-linux-gnueabi-gcc
 
 drone:

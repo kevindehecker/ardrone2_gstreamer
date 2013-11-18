@@ -83,20 +83,35 @@ def ardrone2_reboot():
 
 # Install the vision framework
 def ardrone2_install_vision():
-  print 'TODO'
+  print 'Uploading GST'
+  ftp.storbinary("STOR arm_light.tgz",file("bin/arm_light.tgz","rb"))
+  print execute_command("cd /data/video && tar -xzf arm_light.tgz")
+  print execute_command("rm -rf /data/video/arm_light.tgz")
+  print 'Now Starting Vision'
+  ardrone2_start_vision()
 
 # Remove the vision framework
 def ardrone2_remove_vision():
-  print 'TODO'
+  execute_command("rm -rf /opt/arm")
+  execute_command("rm -rf /lib/dsp")
+  execute_command("rm -rf /data/video/opt")
 
 # Start the vision framework
 def ardrone2_start_vision():
+  # Mount the directories
   execute_command("mkdir -p /opt/arm")
   execute_command("mkdir -p /lib/dsp")
   execute_command("mount --bind /data/video/opt/arm /opt/arm")
   execute_command("mount --bind /data/video/opt/arm/lib/dsp /lib/dsp")
+  # Start The DSP programs
+  execute_command("kill -9 `pidof program.elf`")
+  execute_command("kill -9 `pidof gst-launch-0.10`")
+  execute_command("export PATH=/opt/arm/gst/bin:$PATH")
+  execute_command("export DSP_PATH=/opt/arm/tidsp-binaries-23.i3.8/")
+  execute_command("/bin/dspbridge/cexec.out -T /opt/arm/tidsp-binaries-23.i3.8/baseimage.dof -v")
+  execute_command("/bin/dspbridge/dynreg.out -r /opt/arm/tidsp-binaries-23.i3.8/m4venc_sn.dll64P -v")
+  # Show result
   execute_command("ls -altr /opt/arm/gst/bin")
-
 
 # Parse the arguments
 parser = argparse.ArgumentParser(description='ARDrone 2 python helper. Use ardrone2.py -h for help')

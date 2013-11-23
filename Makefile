@@ -14,7 +14,7 @@ clean:
 	rm -rf ./opt
 
 install:
-	sudo apt-get install scratchbox2 qemu gstreamer0.10-ffmpeg
+	sudo apt-get install scratchbox2 qemu gstreamer0.10-ffmpeg gstreamer0.10-plugins-bad
 	sb2-init -c qemu-arm armv7 /usr/local/codesourcery/arm-2009q3/bin/arm-none-linux-gnueabi-gcc
 
 drone:
@@ -25,4 +25,3 @@ explain:
 		cat /firmware/version.txt;			\
 		uname -a;					\
 	} | telnet $(HOST)
-	

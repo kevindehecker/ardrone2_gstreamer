@@ -3,6 +3,7 @@ import re
 import argparse
 import socket
 import telnetlib
+from time import sleep
 from ftplib import FTP
 
 
@@ -47,11 +48,11 @@ def check_running():
   running = ""
 
   if 'program.elf' in ps_aux:
-    running += ' Native'
+    running += ' Native (program.elf),'
   if 'ap.elf' in ps_aux:
-    running += ' Paparazzi'
+    running += ' Paparazzi (ap.elf),'
   if 'gst-launch' in ps_aux:
-    running += ' GStreamer'
+    running += ' GStreamer (gst-launch)'
   return running[1:]
 
 # Check if vision framework is installed
@@ -113,46 +114,7 @@ def ardrone2_start_vision():
   # Show result
   execute_command("ls -altr /opt/arm/gst/bin")
 
-# Parse the arguments
-parser = argparse.ArgumentParser(description='ARDrone 2 python helper. Use ardrone2.py -h for help')
-parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
-                   help='the ip address of ardrone2')
-subparsers = parser.add_subparsers(title='Command to execute', metavar='command', dest='command')
-
-# All the subcommands and arguments
-subparsers.add_parser('status', help='Request the status of the ARDrone 2')
-subparsers.add_parser('reboot', help='Reboot the ARDrone 2')
-subparsers.add_parser('installvision', help='Install the vision framework')
-subparser_upload = subparsers.add_parser('upload_gst_module', help='Upload, configure and move a gstreamer0.10 module libXXX.so')
-subparser_upload.add_argument('file', help='Filename of *.so module')
-subparsers.add_parser('startvision', help='Start the vision framework')
-subparser_start = subparsers.add_parser('start', help='Start a program on the ARDrone 2')
-subparser_start.add_argument('program', help='the program to start')
-subparser_kill = subparsers.add_parser('kill', help='Kill a program on the ARDrone 2')
-subparser_kill.add_argument('program', help='the program to kill')
-subparser_networkid = subparsers.add_parser('networkid', help='Set the network ID(SSID) of the ARDrone 2')
-subparser_networkid.add_argument('name', help='the new network ID(SSID)')
-subparser_ipaddress = subparsers.add_parser('ipaddress', help='Set the IP address of the ARDrone 2')
-subparser_ipaddress.add_argument('address', help='the new IP address')
-subparser_autostart = subparsers.add_parser('autostart', help='Set what to start on boot for the ARDrone 2')
-subparser_autostart.add_argument('type', choices=['native','paparazzi_raw','paparazzi_sdk'], help='what to start on boot')
-
-args = parser.parse_args()
-
-# Connect with telnet and ftp
-try:
-  tn = telnetlib.Telnet(args.host)
-  ftp = FTP(args.host)
-  ftp.login()
-except:
-  print 'Could not connect to ARDrone 2 (host: '+args.host+')'
-  exit(2)
-
-# Read until after login
-tn.read_until('# ')
-
-# Check the ARDrone 2 status
-if args.command == 'status':
+def ardrone2_status():
   config_ini = execute_command('cat /data/config.ini')
 
   print '======================== ARDrone 2 Status ========================'
@@ -181,10 +143,62 @@ if args.command == 'status':
   if check_vision_running:
     vision_framework += " and running"
   print 'Vision framework:\t'+vision_framework
-  
+
   # Request the filesystem status
   print '\n======================== Filesystem Status ========================'
   print check_filesystem()
+
+
+
+
+
+
+# Parse the arguments
+parser = argparse.ArgumentParser(description='ARDrone 2 python helper. Use ardrone2.py -h for help')
+parser.add_argument('--host', metavar='HOST', default='192.168.1.1',
+                   help='the ip address of ardrone2')
+subparsers = parser.add_subparsers(title='Command to execute', metavar='command', dest='command')
+
+# All the subcommands and arguments
+subparsers.add_parser('status', help='Request the status of the ARDrone 2')
+subparsers.add_parser('reboot', help='Reboot the ARDrone 2')
+subparsers.add_parser('installvision', help='Install the vision framework')
+subparser_upload = subparsers.add_parser('upload_gst_module', help='Upload, configure and move a gstreamer0.10 module libXXX.so')
+subparser_upload.add_argument('file', help='Filename of *.so module')
+subparser_paparazzi = subparsers.add_parser('upload_paparazzi', help='Upload paparazzi autopilot software')
+subparser_paparazzi.add_argument('file', help='Filename of *.elf executable')
+subparser_paparazzi.add_argument('folder', help='Destination Subfolder: raw or sdk')
+subparser_insmod = subparsers.add_parser('insmod', help='Upload and insert kernel module')
+subparser_insmod.add_argument('file', help='Filename of *.ko kernel module')
+subparsers.add_parser('startvision', help='Start the vision framework')
+subparser_start = subparsers.add_parser('start', help='Start a program on the ARDrone 2')
+subparser_start.add_argument('program', help='the program to start')
+subparser_kill = subparsers.add_parser('kill', help='Kill a program on the ARDrone 2')
+subparser_kill.add_argument('program', help='the program to kill')
+subparser_networkid = subparsers.add_parser('networkid', help='Set the network ID(SSID) of the ARDrone 2')
+subparser_networkid.add_argument('name', help='the new network ID(SSID)')
+subparser_ipaddress = subparsers.add_parser('ipaddress', help='Set the IP address of the ARDrone 2')
+subparser_ipaddress.add_argument('address', help='the new IP address')
+subparser_autostart = subparsers.add_parser('autostart', help='Set what to start on boot for the ARDrone 2')
+subparser_autostart.add_argument('type', choices=['native','paparazzi_raw','paparazzi_sdk'], help='what to start on boot')
+
+args = parser.parse_args()
+
+# Connect with telnet and ftp
+try:
+  tn = telnetlib.Telnet(args.host)
+  ftp = FTP(args.host)
+  ftp.login()
+except:
+  print 'Could not connect to ARDrone 2 (host: '+args.host+')'
+  exit(2)
+
+# Read until after login
+tn.read_until('# ')
+
+# Check the ARDrone 2 status
+if args.command == 'status':
+  ardrone2_status()
 
 # Reboot the drone
 elif args.command == 'reboot':
@@ -204,8 +218,8 @@ elif args.command == 'start':
 # Change the network ID
 elif args.command == 'networkid':
   write_to_config('ssid_single_player', args.name)
-  print 'The network ID (SSID) of the ARDrone 2 is changed to '+args.name  
-  
+  print 'The network ID (SSID) of the ARDrone 2 is changed to '+args.name
+
   if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
     ardrone2_reboot()
 
@@ -215,7 +229,7 @@ elif args.command == 'ipaddress':
   write_to_config('static_ip_address_base', splitted_ip[0]+'.'+splitted_ip[1]+'.'+splitted_ip[2]+'.')
   write_to_config('static_ip_address_probe', splitted_ip[3])
   print 'The IP Address of the ARDrone 2 is changed to '+args.address
-  
+
   if raw_input("Shall I restart the ARDrone 2? (y/N) ").lower() == 'y':
     ardrone2_reboot()
 
@@ -232,7 +246,7 @@ elif args.command == 'installvision':
     if raw_input("Shall I reinstall the vision framework? (y/N) ").lower() == 'y':
       ardrone2_remove_vision()
       ardrone2_install_vision()
-  
+
   ardrone2_install_vision()
   print 'Vision framework installed'
 
@@ -245,7 +259,7 @@ elif args.command == 'startvision':
       print 'No vision framework installed'
       if raw_input("Shall I install the vision framework? (y/N) ").lower() == 'y':
         ardrone2_install_vision()
-    
+
     if check_vision_installed():
       ardrone2_start_vision()
       print 'Vision framework started'
@@ -253,9 +267,44 @@ elif args.command == 'startvision':
 elif args.command == 'upload_gst_module':
   print 'Uploading ...' + args.file
   ftp.storbinary("STOR " + args.file,file(args.file,"rb"))
-  print execute_command("chmod 777 /data/video/" + args.file)
+  execute_command("chmod 777 /data/video/" + args.file)
   print execute_command("mv /data/video/" + args.file + " /data/video/opt/arm/gst/lib/gstreamer-0.10")
-  print 'Ready...'
+  if check_vision_running():
+    print 'Info: Vision framework already started'
+  else:
+    if not check_vision_installed():
+      print 'Warning: No vision framework installed'
+      if raw_input("Warning: Shall I install the vision framework? (y/N) ").lower() == 'y':
+        ardrone2_install_vision()
+
+    if check_vision_installed():
+      ardrone2_start_vision()
+      print '#pragma message: Vision framework started'
+  print '#pragma message: Vision Plugin Uploaded and DSP Started.'
+
+
+elif args.command == 'insmod':
+    modfile = args.file.rsplit('/',1)
+    print 'Uploading \'' + modfile[1]
+    ftp.storbinary("STOR " + modfile[1], file(args.file,"rb"))
+    print execute_command("insmod /data/video/"+modfile[1])
+
+elif args.command == 'upload_paparazzi':
+    # Split filename and path
+    f = args.file.rsplit('/', 1)
+
+    print "Kill running ap.elf and make folder " + args.folder
+    execute_command("killall -9 " + f[1])
+    sleep(1)
+    execute_command("mkdir -p " + args.folder)
+    print 'Uploading \'' + f[1] + "\' from " + f[0] + " to " + args.folder
+    ftp.storbinary("STOR "  + args.folder + "/" + f[1], file(args.file,"rb"))
+    sleep(0.5)
+    execute_command("chmod 777 /data/video/" + args.folder + "/" + f[1])
+    execute_command("/data/video/" + args.folder + "/" + f[1] + " > /dev/null 2>&1 &")
+    print("#pragma message: Upload and Start of ap.elf to ARDrone2 Succes!")
+
+
 
 # Close the telnet and python script
 tn.close();

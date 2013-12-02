@@ -1,0 +1,29 @@
+$ telnet 192.168.1.1
+
+In telnet session on drone:
+
+kill -9 `pidof program.elf`
+mkdir /opt
+mount /dev/sda1 /opt
+export PATH=/opt/arm/gst/bin:$PATH
+mkdir /data/video/kevin/usb -p
+mount --bind /opt /data/video/kevin/usb
+export DSP_PATH=/lib/dsp
+
+#/bin/dspbridge/cexec.out -T /opt/tidsp-binaries-23.i3.8/baseimage.dof -v
+#/bin/dspbridge/dynreg.out -r /opt/tidsp-binaries-23.i3.8/m4venc_sn.dll64P -v
+
+
+# Cam 1 (frontcam) gescaled via de dsp over netwerk:
+gst-launch v4l2src device=/dev/video1 ! videorate ! 'video/x-raw-yuv,framerate=15/1' ! videoscale ! video/x-raw-yuv, width=640, height=368 ! dspmp4venc ! rtpmp4vpay config-interval=2 ! udpsink host=192.168.1.5 port=5000
+
+Where the 192.168.1.5 is YOUR PC client IP, so clould be different
+
+OR
+
+Cam 2 (downcam) full res via de dsp over netwerk:
+gst-launch v4l2src device=/dev/video2 ! dspmp4venc ! rtpmp4vpay config-interval=2 ! udpsink host=192.168.1.5 port=5000
+
+!And a video stream client on your laptop:
+
+gst-launch-0.10 -vvv playbin uri=file:///home/n3yh3hnii/paparazzi/OpenUAS/config.sdp

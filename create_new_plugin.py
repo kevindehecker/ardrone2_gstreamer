@@ -8,7 +8,7 @@ if (len(sys.argv) <= 1) :
     sys.exit()
 
 name = str(sys.argv[1])
-dirname = "./pprz_gst_plugins/" + name + "/"
+dirname = "./gst_plugin/" + name + "/"
 print("Creating new GStreamer pluging called: '" + name + "' in '" + dirname + "'")
 
 

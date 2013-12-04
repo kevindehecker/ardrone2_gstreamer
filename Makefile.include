@@ -1,0 +1,29 @@
+
+DIR_GSTREAMER := $(dir $(lastword $(MAKEFILE_LIST)))
+
+
+ifeq ($(PROCESSOR),x86)
+	dspdir      := /lib/dsp
+	prefix      := /opt/x86/gst
+else
+	dspdir      := $(DIR_GSTREAMER)/opt/arm/lib/dsp
+	prefix      := $(DIR_GSTREAMER)/opt/arm/gst
+endif
+
+GST_CFLAGS      := -pthread -I$(prefix)/include/gstreamer-0.10 -I$(prefix)/include/glib-2.0 -I$(prefix)/lib/glib-2.0/include
+GST_LIBS        := -L$(prefix)/lib -lgstreamer-0.10 -lgobject-2.0 -lgmodule-2.0 -pthread -lrt -lgthread-2.0 -pthread -lrt -lglib-2.0 -lffi
+
+override CFLAGS += -DDSP_API=$(DSP_API)
+override CFLAGS += -DSN_API=$(SN_API)
+override CFLAGS += $(GST_CFLAGS)
+
+override LIBS   += $(GST_LIBS)
+
+
+# Library Headers should be present
+GST_H 		= $(prefix)/include/gstreamer-0.10/gst/gst.h
+
+
+$(GST_H):
+	make -C $(DIR_GSTREAMER)
+

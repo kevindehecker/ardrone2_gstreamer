@@ -1,35 +1,26 @@
+# Include master makefile
+include ../../../Makefile.include
 
-ifeq ($(PROCESSOR),x86)
-	include ../../gst_plugin_framework/Makefile-x86.conf
-	override CFLAGS += -std=c99 -D_GNU_SOURCE -DGST_DISABLE_DEPRECATED
-	override CFLAGS += -DDSP_API=$(DSP_API) -DSN_API=$(SN_API)
-	override CFLAGS += -I../../gst_plugin_framework
-else
-	include ../../gst_plugin_framework/Makefile-ARM.conf
-	override CFLAGS += -std=c99 -D_GNU_SOURCE -DGST_DISABLE_DEPRECATED -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp -ftree-vectorize
-	override CFLAGS += -DDSP_API=$(DSP_API) -DSN_API=$(SN_API)
-	override CFLAGS += -I../../gst_plugin_framework -I./
-endif
+# Include gstreamer makefile
+include $(DIR_GSTREAMER)/Makefile.include
 
+# Specify paths of interest
+override CFLAGS += -I$(DIR_LIB)
 
 all:
 
-D = $(DESTDIR)
-
-
 gst_plugin := lib%%%Pluginname%%%.so
 
-$(gst_plugin):  gst_%%%pluginname%%%_plugin.o %%%pluginname%%%_code.o ../../gst_plugin_framework/socket.o
-$(gst_plugin): override CFLAGS += $(GST_CFLAGS) \
-	-D VERSION='"$(version)"' -D DSPDIR='"$(dspdir)"'
+OBJECTS  =  	gst_%%%pluginname%%%_plugin.o \
+		%%%pluginname%%%_code.o \
+		$(DIR_LIB)/udp/socket.o
+
+$(gst_plugin): $(OBJECTS)
+$(gst_plugin): override CFLAGS += $(GST_CFLAGS) -D VERSION='"$(version)"' -D DSPDIR='"$(dspdir)"'
 $(gst_plugin): override LIBS += $(GST_LIBS)
 
-targets += $(gst_plugin)
-
-
 upload:
-	sb2 make -C ./ all && ../../ardrone2_gstreamer/ardrone2.py upload_gst_module $(gst_plugin)
-
+	sb2 make -C ./ all && $(DRONE_TOOL) upload_gst_module $(gst_plugin)
 
 doc: $(gst_plugin)
 	$(MAKE) -C doc
@@ -37,18 +28,11 @@ doc: $(gst_plugin)
 doc-install: doc
 	$(MAKE) -C doc install
 
-all: $(targets) $(bins)
-
-# pretty print
-ifndef V
-QUIET_CC    = @echo '   CC         '$@;
-QUIET_LINK  = @echo '   LINK       '$@;
-QUIET_CLEAN = @echo '   CLEAN      '$@;
-endif
+all: $(gst_plugin)
 
 %.so: override CFLAGS += -fPIC
 
-%.o:: %.c
+%.o:: %.c $(GST_H)
 	$(QUIET_CC)$(CC) $(CFLAGS) -MMD -MP -o $@ -c $<
 
 $(bins):
@@ -62,7 +46,7 @@ $(bins):
 
 clean:
 	echo $(PROCESSOR)
-	$(QUIET_CLEAN)$(RM) -v $(targets) $(bins) *.o *.d tidsp/*.d tidsp/*.o ../../gst_plugin_framework/*.o ../../gst_plugin_framework/*.d
+	$(QUIET_CLEAN)$(RM) -v $(gst_plugin) *.o *.d tidsp/*.d tidsp/*.o $(OBJECTS) $(OBJECTS:.o=.d) 
 
 dist: base := gst-dsp-$(version)
 dist:

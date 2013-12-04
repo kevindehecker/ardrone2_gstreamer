@@ -46,7 +46,7 @@ $(bins):
 
 clean:
 	echo $(PROCESSOR)
-	$(QUIET_CLEAN)$(RM) -v $(gst_plugin) *.o *.d tidsp/*.d tidsp/*.o $(OBJECTS) $(OBJECTS:.o=.d) 
+	$(QUIET_CLEAN)$(RM) -v $(gst_plugin) *.o *.d tidsp/*.d tidsp/*.o $(OBJECTS) $(OBJECTS:.o=.d)
 
 dist: base := gst-dsp-$(version)
 dist:

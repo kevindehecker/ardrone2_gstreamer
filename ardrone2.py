@@ -151,7 +151,7 @@ def ardrone2_status():
     vision_framework = ""
     if check_vision_installed():
         vision_framework += "Installed"
-    if check_vision_running:
+    if check_vision_running():
         vision_framework += " and running"
     print('Vision framework:\t' + vision_framework)
 

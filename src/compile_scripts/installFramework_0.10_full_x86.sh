@@ -9,6 +9,7 @@ export LD_LIBRARY_PATH=/opt/x86_full/gst/bin:$LD_LIBRARY_PATH
 mkdir -p ~/ctmpx86_full
 sudo mkdir -p /opt/x86_full
 sudo chown houjebek /opt/x86_full
+sudo ln -s x86_full/ x86
 
 echo *****************dependacies for gstreamer framework********************
 

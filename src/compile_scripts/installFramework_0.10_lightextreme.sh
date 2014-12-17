@@ -6,6 +6,7 @@ export PKG_CONFIG_PATH=/opt/arm_light/gst/lib/pkgconfig
 mkdir -p ~/ctmp_light
 sudo mkdir -p /opt/arm_light
 sudo chown houjebek /opt/arm_light
+ln -s /opt/arm_light/ arm
 
 
 echo *****************dependacies for gstreamer framework********************
